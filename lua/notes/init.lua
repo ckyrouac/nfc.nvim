@@ -200,12 +200,43 @@ local function get_todo_list_names()
   return names
 end
 
-function M.add_todo(list_name)
-  list_name = list_name or config.default_todo_list
+local function get_cursor_todo_list()
+  local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+  local cursor_line = vim.api.nvim_win_get_cursor(0)[1]
+  local current_list = nil
 
+  for i = 1, cursor_line do
+    local line = lines[i]
+    local named_list = line:match('^## TODO %((.+)%)%s*$')
+    local default_list = line:match('^## TODO%s*$')
+
+    if named_list then
+      current_list = named_list
+    elseif default_list then
+      current_list = ''
+    elseif line:match('^#') then
+      current_list = nil
+    end
+  end
+
+  return current_list
+end
+
+function M.add_todo(list_name)
   local notes_dir = get_notes_dir()
   local today_path = notes_dir .. get_today_filename()
   local current_file = vim.fn.expand('%:p')
+
+  if list_name == nil and current_file == today_path then
+    local cursor_list = get_cursor_todo_list()
+    if cursor_list then
+      list_name = cursor_list ~= '' and cursor_list or nil
+    else
+      list_name = config.default_todo_list
+    end
+  else
+    list_name = list_name or config.default_todo_list
+  end
 
   if current_file ~= today_path then
     M.open_today()
