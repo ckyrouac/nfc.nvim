@@ -27,3 +27,8 @@ end, { desc = 'Add a new TODO item', nargs = '?' })
 vim.api.nvim_create_user_command('NotesTodoPick', function()
   require('notes').pick_todo_list()
 end, { desc = 'Pick TODO list to add item' })
+
+vim.keymap.set('n', '<leader>nn', '<cmd>Notes<cr>', { desc = "Open today's notes" })
+vim.keymap.set('n', '<leader>nd', '<cmd>NotesMarkDone<cr>', { desc = 'Mark TODO done' })
+vim.keymap.set('n', '<leader>nt', '<cmd>NotesTodo<cr>', { desc = 'Add TODO item' })
+vim.keymap.set('n', '<leader>np', '<cmd>NotesTodoPick<cr>', { desc = 'Pick TODO list' })
