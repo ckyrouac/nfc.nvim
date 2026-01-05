@@ -1,5 +1,9 @@
 local M = {}
 
+local config = {
+  default_todo_list = nil,
+}
+
 local function get_notes_dir()
   local dir = vim.fn.expand('~/notes.nvim/')
   if vim.fn.isdirectory(dir) == 0 then
@@ -32,24 +36,48 @@ local function find_previous_notes()
   return nil
 end
 
-local function parse_incomplete_todos(filepath)
+local function make_todo_header(list_name)
+  if list_name then
+    return '## TODO (' .. list_name .. ')'
+  else
+    return '## TODO'
+  end
+end
+
+local function parse_todo_sections(filepath)
   if not filepath or vim.fn.filereadable(filepath) == 0 then
     return {}
   end
 
   local lines = vim.fn.readfile(filepath)
-  local todos = {}
+  local sections = {}
+  local current_list = nil
 
   for _, line in ipairs(lines) do
-    if line:match('^%s*%- %[ %]') then
-      table.insert(todos, line)
+    local named_list = line:match('^## TODO %((.+)%)%s*$')
+    local default_list = line:match('^## TODO%s*$')
+
+    if named_list then
+      current_list = named_list
+      if not sections[current_list] then
+        sections[current_list] = {}
+      end
+    elseif default_list then
+      current_list = ''
+      if not sections[current_list] then
+        sections[current_list] = {}
+      end
+    elseif line:match('^#') then
+      current_list = nil
+    elseif current_list and line:match('^%s*%- %[ %]') then
+      table.insert(sections[current_list], line)
     end
   end
 
-  return todos
+  return sections
 end
 
-local function create_daily_note(todos)
+local function create_daily_note(todo_sections)
   local date = os.date('%Y-%m-%d')
   local lines = {
     '# Notes for ' .. date,
@@ -57,14 +85,31 @@ local function create_daily_note(todos)
     '## Accomplishments',
     '',
     '',
-    '## TODO',
   }
 
-  if #todos > 0 then
-    for _, todo in ipairs(todos) do
-      table.insert(lines, todo)
+  local has_sections = false
+  for _ in pairs(todo_sections) do
+    has_sections = true
+    break
+  end
+
+  if has_sections then
+    local sorted_names = {}
+    for name in pairs(todo_sections) do
+      table.insert(sorted_names, name)
+    end
+    table.sort(sorted_names)
+
+    for _, name in ipairs(sorted_names) do
+      local header = make_todo_header(name ~= '' and name or nil)
+      table.insert(lines, header)
+      for _, todo in ipairs(todo_sections[name]) do
+        table.insert(lines, todo)
+      end
+      table.insert(lines, '')
     end
   else
+    table.insert(lines, '## TODO')
     table.insert(lines, '- [ ] ')
   end
 
@@ -77,8 +122,8 @@ function M.open_today()
 
   if vim.fn.filereadable(filepath) == 0 then
     local prev_notes = find_previous_notes()
-    local todos = parse_incomplete_todos(prev_notes)
-    local content = create_daily_note(todos)
+    local todo_sections = parse_todo_sections(prev_notes)
+    local content = create_daily_note(todo_sections)
     vim.fn.writefile(content, filepath)
   end
 
@@ -125,7 +170,9 @@ function M.search()
   })
 end
 
-function M.add_todo()
+function M.add_todo(list_name)
+  list_name = list_name or config.default_todo_list
+
   local notes_dir = get_notes_dir()
   local today_path = notes_dir .. get_today_filename()
   local current_file = vim.fn.expand('%:p')
@@ -135,17 +182,21 @@ function M.add_todo()
   end
 
   local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+  local target_header = make_todo_header(list_name)
   local todo_line = nil
 
   for i, line in ipairs(lines) do
-    if line:match('^## TODO') then
+    if line == target_header then
       todo_line = i
       break
     end
   end
 
   if not todo_line then
-    vim.notify('TODO section not found', vim.log.levels.ERROR)
+    local last_line = #lines
+    vim.api.nvim_buf_set_lines(0, last_line, last_line, false, { '', target_header, '- [ ] ' })
+    vim.api.nvim_win_set_cursor(0, { last_line + 3, 6 })
+    vim.cmd('startinsert!')
     return
   end
 
@@ -163,7 +214,10 @@ function M.add_todo()
 end
 
 function M.setup(opts)
-  -- Reserved for future configuration options
+  opts = opts or {}
+  if opts.default_todo_list ~= nil then
+    config.default_todo_list = opts.default_todo_list
+  end
 end
 
 return M

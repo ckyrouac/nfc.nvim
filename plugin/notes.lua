@@ -19,6 +19,7 @@ vim.api.nvim_create_user_command('NotesSearch', function()
   require('notes').search()
 end, { desc = 'Search notes content' })
 
-vim.api.nvim_create_user_command('NotesTodo', function()
-  require('notes').add_todo()
-end, { desc = 'Add a new TODO item' })
+vim.api.nvim_create_user_command('NotesTodo', function(opts)
+  local list_name = opts.args ~= '' and opts.args or nil
+  require('notes').add_todo(list_name)
+end, { desc = 'Add a new TODO item', nargs = '?' })
