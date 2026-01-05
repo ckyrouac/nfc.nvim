@@ -96,6 +96,35 @@ function M.mark_done()
   end
 end
 
+function M.open_picker()
+  local ok, builtin = pcall(require, 'telescope.builtin')
+  if not ok then
+    vim.notify('Telescope is required for :NotesOpen', vim.log.levels.ERROR)
+    return
+  end
+
+  local notes_dir = get_notes_dir()
+  builtin.find_files({
+    prompt_title = 'Notes',
+    cwd = notes_dir,
+    find_command = { 'find', '.', '-name', '*.md', '-type', 'f' },
+  })
+end
+
+function M.search()
+  local ok, builtin = pcall(require, 'telescope.builtin')
+  if not ok then
+    vim.notify('Telescope is required for :NotesSearch', vim.log.levels.ERROR)
+    return
+  end
+
+  local notes_dir = get_notes_dir()
+  builtin.live_grep({
+    prompt_title = 'Search Notes',
+    cwd = notes_dir,
+  })
+end
+
 function M.setup(opts)
   -- Reserved for future configuration options
 end
