@@ -312,6 +312,11 @@ function M.pick_todo_list()
       results = display_names,
     }),
     sorter = conf.generic_sorter({}),
+    layout_strategy = 'vertical',
+    layout_config = {
+      width = 0.1,
+      height = 0.8,
+    },
     attach_mappings = function(prompt_bufnr, map)
       actions.select_default:replace(function()
         actions.close(prompt_bufnr)
