@@ -2,10 +2,14 @@ local M = {}
 
 local config = {
   default_todo_list = nil,
+  notes_dir = '~/notes.nvim/',
 }
 
 local function get_notes_dir()
-  local dir = vim.fn.expand('~/notes.nvim/')
+  local dir = vim.fn.expand(config.notes_dir)
+  if not dir:match('/$') then
+    dir = dir .. '/'
+  end
   if vim.fn.isdirectory(dir) == 0 then
     vim.fn.mkdir(dir, 'p')
   end
@@ -336,6 +340,9 @@ function M.setup(opts)
   opts = opts or {}
   if opts.default_todo_list ~= nil then
     config.default_todo_list = opts.default_todo_list
+  end
+  if opts.notes_dir ~= nil then
+    config.notes_dir = opts.notes_dir
   end
 end
 
