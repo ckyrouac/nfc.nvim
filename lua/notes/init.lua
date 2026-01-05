@@ -226,13 +226,15 @@ function M.add_todo(list_name)
     local last_line = #lines
     vim.api.nvim_buf_set_lines(0, last_line, last_line, false, { '', target_header, '- [ ] ' })
     vim.api.nvim_win_set_cursor(0, { last_line + 3, 6 })
-    vim.cmd('startinsert!')
+    vim.schedule(function()
+      vim.cmd('startinsert!')
+    end)
     return
   end
 
   local insert_line = todo_line
   for i = todo_line + 1, #lines do
-    if lines[i]:match('^#') then
+    if lines[i]:match('^#') or lines[i]:match('^%s*$') then
       break
     end
     insert_line = i
@@ -240,7 +242,9 @@ function M.add_todo(list_name)
 
   vim.api.nvim_buf_set_lines(0, insert_line, insert_line, false, { '- [ ] ' })
   vim.api.nvim_win_set_cursor(0, { insert_line + 1, 6 })
-  vim.cmd('startinsert!')
+  vim.schedule(function()
+    vim.cmd('startinsert!')
+  end)
 end
 
 function M.pick_todo_list()
