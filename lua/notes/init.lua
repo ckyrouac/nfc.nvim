@@ -148,10 +148,10 @@ local function extract_task_text(line)
   return line:match('^%s*%- %[.%]%s*(.*)$')
 end
 
-local function add_to_accomplishments(task_text)
+local function add_to_accomplishments(task_text, cursor_line)
   local acc_line = find_accomplishments_section()
   if not acc_line then
-    return
+    return 0
   end
 
   local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
@@ -168,12 +168,17 @@ local function add_to_accomplishments(task_text)
   end
 
   vim.api.nvim_buf_set_lines(0, insert_line, insert_line, false, { '- ' .. task_text })
+
+  if insert_line < cursor_line then
+    return 1
+  end
+  return 0
 end
 
-local function remove_from_accomplishments(task_text)
+local function remove_from_accomplishments(task_text, cursor_line)
   local acc_line = find_accomplishments_section()
   if not acc_line then
-    return
+    return 0
   end
 
   local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
@@ -185,31 +190,36 @@ local function remove_from_accomplishments(task_text)
     local acc_text = lines[i]:match('^%- (.*)$')
     if acc_text == task_text then
       vim.api.nvim_buf_set_lines(0, i - 1, i, false, {})
-      return
+      if i < cursor_line then
+        return -1
+      end
+      return 0
     end
   end
+  return 0
 end
 
 function M.mark_done()
   local line = vim.api.nvim_get_current_line()
   local cursor_pos = vim.api.nvim_win_get_cursor(0)
+  local line_offset = 0
 
   if line:match('%- %[ %]') then
     local new_line = line:gsub('%- %[ %]', '- [x]', 1)
     vim.api.nvim_set_current_line(new_line)
     local task_text = extract_task_text(new_line)
     if task_text and task_text ~= '' then
-      add_to_accomplishments(task_text)
+      line_offset = add_to_accomplishments(task_text, cursor_pos[1])
     end
-    vim.api.nvim_win_set_cursor(0, cursor_pos)
+    vim.api.nvim_win_set_cursor(0, { cursor_pos[1] + line_offset, cursor_pos[2] })
   elseif line:match('%- %[x%]') then
     local task_text = extract_task_text(line)
     local new_line = line:gsub('%- %[x%]', '- [ ]', 1)
     vim.api.nvim_set_current_line(new_line)
     if task_text and task_text ~= '' then
-      remove_from_accomplishments(task_text)
+      line_offset = remove_from_accomplishments(task_text, cursor_pos[1])
     end
-    vim.api.nvim_win_set_cursor(0, cursor_pos)
+    vim.api.nvim_win_set_cursor(0, { cursor_pos[1] + line_offset, cursor_pos[2] })
   else
     vim.notify('No TODO item on current line', vim.log.levels.WARN)
   end
