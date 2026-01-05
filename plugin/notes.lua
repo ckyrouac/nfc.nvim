@@ -18,3 +18,7 @@ end, { desc = 'Open notes picker' })
 vim.api.nvim_create_user_command('NotesSearch', function()
   require('notes').search()
 end, { desc = 'Search notes content' })
+
+vim.api.nvim_create_user_command('NotesTodo', function()
+  require('notes').add_todo()
+end, { desc = 'Add a new TODO item' })

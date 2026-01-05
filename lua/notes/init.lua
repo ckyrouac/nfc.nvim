@@ -125,6 +125,43 @@ function M.search()
   })
 end
 
+function M.add_todo()
+  local notes_dir = get_notes_dir()
+  local today_path = notes_dir .. get_today_filename()
+  local current_file = vim.fn.expand('%:p')
+
+  if current_file ~= today_path then
+    M.open_today()
+  end
+
+  local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+  local todo_line = nil
+
+  for i, line in ipairs(lines) do
+    if line:match('^## TODO') then
+      todo_line = i
+      break
+    end
+  end
+
+  if not todo_line then
+    vim.notify('TODO section not found', vim.log.levels.ERROR)
+    return
+  end
+
+  local insert_line = todo_line
+  for i = todo_line + 1, #lines do
+    if lines[i]:match('^#') then
+      break
+    end
+    insert_line = i
+  end
+
+  vim.api.nvim_buf_set_lines(0, insert_line, insert_line, false, { '- [ ] ' })
+  vim.api.nvim_win_set_cursor(0, { insert_line + 1, 6 })
+  vim.cmd('startinsert!')
+end
+
 function M.setup(opts)
   -- Reserved for future configuration options
 end
