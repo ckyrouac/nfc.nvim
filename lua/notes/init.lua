@@ -170,6 +170,36 @@ function M.search()
   })
 end
 
+local function get_todo_list_names()
+  local notes_dir = get_notes_dir()
+  local today_path = notes_dir .. get_today_filename()
+  local filepath = today_path
+
+  if vim.fn.filereadable(filepath) == 0 then
+    filepath = find_previous_notes()
+  end
+
+  if not filepath then
+    return {}
+  end
+
+  local lines = vim.fn.readfile(filepath)
+  local names = {}
+
+  for _, line in ipairs(lines) do
+    local named_list = line:match('^## TODO %((.+)%)%s*$')
+    local default_list = line:match('^## TODO%s*$')
+
+    if named_list then
+      table.insert(names, named_list)
+    elseif default_list then
+      table.insert(names, '')
+    end
+  end
+
+  return names
+end
+
 function M.add_todo(list_name)
   list_name = list_name or config.default_todo_list
 
@@ -211,6 +241,55 @@ function M.add_todo(list_name)
   vim.api.nvim_buf_set_lines(0, insert_line, insert_line, false, { '- [ ] ' })
   vim.api.nvim_win_set_cursor(0, { insert_line + 1, 6 })
   vim.cmd('startinsert!')
+end
+
+function M.pick_todo_list()
+  local ok, pickers = pcall(require, 'telescope.pickers')
+  if not ok then
+    vim.notify('Telescope is required for todo list picker', vim.log.levels.ERROR)
+    return
+  end
+
+  local finders = require('telescope.finders')
+  local conf = require('telescope.config').values
+  local actions = require('telescope.actions')
+  local action_state = require('telescope.actions.state')
+
+  local list_names = get_todo_list_names()
+  local display_names = {}
+
+  for _, name in ipairs(list_names) do
+    if name == '' then
+      table.insert(display_names, '(default)')
+    else
+      table.insert(display_names, name)
+    end
+  end
+
+  if #display_names == 0 then
+    table.insert(display_names, '(default)')
+    table.insert(list_names, '')
+  end
+
+  pickers.new({}, {
+    prompt_title = 'Select TODO List',
+    finder = finders.new_table({
+      results = display_names,
+    }),
+    sorter = conf.generic_sorter({}),
+    attach_mappings = function(prompt_bufnr, map)
+      actions.select_default:replace(function()
+        actions.close(prompt_bufnr)
+        local selection = action_state.get_selected_entry()
+        if selection then
+          local idx = selection.index
+          local selected_name = list_names[idx]
+          M.add_todo(selected_name ~= '' and selected_name or nil)
+        end
+      end)
+      return true
+    end,
+  }):find()
 end
 
 function M.setup(opts)

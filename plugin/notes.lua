@@ -23,3 +23,7 @@ vim.api.nvim_create_user_command('NotesTodo', function(opts)
   local list_name = opts.args ~= '' and opts.args or nil
   require('notes').add_todo(list_name)
 end, { desc = 'Add a new TODO item', nargs = '?' })
+
+vim.api.nvim_create_user_command('NotesTodoPick', function()
+  require('notes').pick_todo_list()
+end, { desc = 'Pick TODO list to add item' })
