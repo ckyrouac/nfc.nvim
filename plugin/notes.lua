@@ -32,3 +32,5 @@ vim.keymap.set('n', '<leader>nn', '<cmd>Notes<cr>', { desc = "Open today's notes
 vim.keymap.set('n', '<leader>nd', '<cmd>NotesMarkDone<cr>', { desc = 'Mark TODO done' })
 vim.keymap.set('n', '<leader>nt', '<cmd>NotesTodo<cr>', { desc = 'Add TODO item' })
 vim.keymap.set('n', '<leader>np', '<cmd>NotesTodoPick<cr>', { desc = 'Pick TODO list' })
+vim.keymap.set('n', '<leader>no', '<cmd>NotesOpen<cr>', { desc = 'Open notes picker' })
+vim.keymap.set('n', '<leader>ns', '<cmd>NotesSearch<cr>', { desc = 'Search notes' })
