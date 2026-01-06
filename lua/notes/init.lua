@@ -139,7 +139,7 @@ local function extract_task_text(line)
   return line:match('^%s*%- %[.%]%s*(.*)$')
 end
 
-local function add_to_accomplishments(task_text, cursor_line)
+local function add_to_accomplishments(task_text, cursor_line, list_name)
   local acc_line = find_accomplishments_section()
   if not acc_line then
     return 0
@@ -158,7 +158,13 @@ local function add_to_accomplishments(task_text, cursor_line)
     insert_line = i
   end
 
-  vim.api.nvim_buf_set_lines(0, insert_line, insert_line, false, { '- ' .. task_text })
+  local accomplishment_text
+  if list_name and list_name ~= '' then
+    accomplishment_text = '- [' .. list_name .. '] ' .. task_text
+  else
+    accomplishment_text = '- ' .. task_text
+  end
+  vim.api.nvim_buf_set_lines(0, insert_line, insert_line, false, { accomplishment_text })
 
   if insert_line < cursor_line then
     return 1
@@ -166,7 +172,7 @@ local function add_to_accomplishments(task_text, cursor_line)
   return 0
 end
 
-local function remove_from_accomplishments(task_text, cursor_line)
+local function remove_from_accomplishments(task_text, cursor_line, list_name)
   local acc_line = find_accomplishments_section()
   if not acc_line then
     return 0
@@ -174,12 +180,19 @@ local function remove_from_accomplishments(task_text, cursor_line)
 
   local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
 
+  local expected_text
+  if list_name and list_name ~= '' then
+    expected_text = '[' .. list_name .. '] ' .. task_text
+  else
+    expected_text = task_text
+  end
+
   for i = acc_line + 1, #lines do
     if lines[i]:match('^#') then
       break
     end
     local acc_text = lines[i]:match('^%- (.*)$')
-    if acc_text == task_text then
+    if acc_text == expected_text then
       vim.api.nvim_buf_set_lines(0, i - 1, i, false, {})
       if i < cursor_line then
         return -1
@@ -194,13 +207,14 @@ function M.mark_done()
   local line = vim.api.nvim_get_current_line()
   local cursor_pos = vim.api.nvim_win_get_cursor(0)
   local line_offset = 0
+  local list_name = get_cursor_todo_list()
 
   if line:match('%- %[ %]') then
     local new_line = line:gsub('%- %[ %]', '- [x]', 1)
     vim.api.nvim_set_current_line(new_line)
     local task_text = extract_task_text(new_line)
     if task_text and task_text ~= '' then
-      line_offset = add_to_accomplishments(task_text, cursor_pos[1])
+      line_offset = add_to_accomplishments(task_text, cursor_pos[1], list_name)
     end
     vim.api.nvim_win_set_cursor(0, { cursor_pos[1] + line_offset, cursor_pos[2] })
   elseif line:match('%- %[x%]') then
@@ -208,7 +222,7 @@ function M.mark_done()
     local new_line = line:gsub('%- %[x%]', '- [ ]', 1)
     vim.api.nvim_set_current_line(new_line)
     if task_text and task_text ~= '' then
-      line_offset = remove_from_accomplishments(task_text, cursor_pos[1])
+      line_offset = remove_from_accomplishments(task_text, cursor_pos[1], list_name)
     end
     vim.api.nvim_win_set_cursor(0, { cursor_pos[1] + line_offset, cursor_pos[2] })
   else
