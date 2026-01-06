@@ -139,6 +139,11 @@ local function extract_task_text(line)
   return line:match('^%s*%- %[.%]%s*(.*)$')
 end
 
+local function get_accomplishment_tag(line)
+  local tag = line:match('^%- %[([^%]]+)%]')
+  return tag
+end
+
 local function add_to_accomplishments(task_text, cursor_line, list_name)
   local acc_line = find_accomplishments_section()
   if not acc_line then
@@ -146,17 +151,6 @@ local function add_to_accomplishments(task_text, cursor_line, list_name)
   end
 
   local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
-  local insert_line = acc_line
-
-  for i = acc_line + 1, #lines do
-    if lines[i]:match('^#') then
-      break
-    end
-    if lines[i]:match('^%s*$') then
-      break
-    end
-    insert_line = i
-  end
 
   local accomplishment_text
   if list_name and list_name ~= '' then
@@ -164,6 +158,28 @@ local function add_to_accomplishments(task_text, cursor_line, list_name)
   else
     accomplishment_text = '- ' .. task_text
   end
+
+  local new_tag = list_name or ''
+  local insert_line = acc_line
+
+  for i = acc_line + 1, #lines do
+    if lines[i]:match('^#') or lines[i]:match('^%s*$') then
+      break
+    end
+
+    local existing_tag = get_accomplishment_tag(lines[i]) or ''
+
+    if new_tag == '' then
+      insert_line = i
+    elseif existing_tag == '' then
+      break
+    elseif new_tag <= existing_tag then
+      break
+    else
+      insert_line = i
+    end
+  end
+
   vim.api.nvim_buf_set_lines(0, insert_line, insert_line, false, { accomplishment_text })
 
   if insert_line < cursor_line then
