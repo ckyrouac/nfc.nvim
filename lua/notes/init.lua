@@ -203,6 +203,28 @@ local function remove_from_accomplishments(task_text, cursor_line, list_name)
   return 0
 end
 
+local function get_cursor_todo_list()
+  local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+  local cursor_line = vim.api.nvim_win_get_cursor(0)[1]
+  local current_list = nil
+
+  for i = 1, cursor_line do
+    local line = lines[i]
+    local named_list = line:match('^## TODO %((.+)%)%s*$')
+    local default_list = line:match('^## TODO%s*$')
+
+    if named_list then
+      current_list = named_list
+    elseif default_list then
+      current_list = ''
+    elseif line:match('^#') then
+      current_list = nil
+    end
+  end
+
+  return current_list
+end
+
 function M.mark_done()
   local line = vim.api.nvim_get_current_line()
   local cursor_pos = vim.api.nvim_win_get_cursor(0)
@@ -287,28 +309,6 @@ local function get_todo_list_names()
   end
 
   return names
-end
-
-local function get_cursor_todo_list()
-  local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
-  local cursor_line = vim.api.nvim_win_get_cursor(0)[1]
-  local current_list = nil
-
-  for i = 1, cursor_line do
-    local line = lines[i]
-    local named_list = line:match('^## TODO %((.+)%)%s*$')
-    local default_list = line:match('^## TODO%s*$')
-
-    if named_list then
-      current_list = named_list
-    elseif default_list then
-      current_list = ''
-    elseif line:match('^#') then
-      current_list = nil
-    end
-  end
-
-  return current_list
 end
 
 function M.add_todo(list_name)
