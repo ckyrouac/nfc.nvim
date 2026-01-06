@@ -50,11 +50,12 @@ end
 
 local function parse_todo_sections(filepath)
   if not filepath or vim.fn.filereadable(filepath) == 0 then
-    return {}
+    return {}, {}
   end
 
   local lines = vim.fn.readfile(filepath)
   local sections = {}
+  local section_order = {}
   local current_list = nil
 
   for _, line in ipairs(lines) do
@@ -65,11 +66,13 @@ local function parse_todo_sections(filepath)
       current_list = named_list
       if not sections[current_list] then
         sections[current_list] = {}
+        table.insert(section_order, current_list)
       end
     elseif default_list then
       current_list = ''
       if not sections[current_list] then
         sections[current_list] = {}
+        table.insert(section_order, current_list)
       end
     elseif line:match('^#') then
       current_list = nil
@@ -78,10 +81,10 @@ local function parse_todo_sections(filepath)
     end
   end
 
-  return sections
+  return sections, section_order
 end
 
-local function create_daily_note(todo_sections)
+local function create_daily_note(todo_sections, section_order)
   local date = os.date('%Y-%m-%d')
   local lines = {
     '# Notes for ' .. date,
@@ -91,20 +94,8 @@ local function create_daily_note(todo_sections)
     '',
   }
 
-  local has_sections = false
-  for _ in pairs(todo_sections) do
-    has_sections = true
-    break
-  end
-
-  if has_sections then
-    local sorted_names = {}
-    for name in pairs(todo_sections) do
-      table.insert(sorted_names, name)
-    end
-    table.sort(sorted_names)
-
-    for _, name in ipairs(sorted_names) do
+  if #section_order > 0 then
+    for _, name in ipairs(section_order) do
       local header = make_todo_header(name ~= '' and name or nil)
       table.insert(lines, header)
       for _, todo in ipairs(todo_sections[name]) do
@@ -126,8 +117,8 @@ function M.open_today()
 
   if vim.fn.filereadable(filepath) == 0 then
     local prev_notes = find_previous_notes()
-    local todo_sections = parse_todo_sections(prev_notes)
-    local content = create_daily_note(todo_sections)
+    local todo_sections, section_order = parse_todo_sections(prev_notes)
+    local content = create_daily_note(todo_sections, section_order)
     vim.fn.writefile(content, filepath)
   end
 
