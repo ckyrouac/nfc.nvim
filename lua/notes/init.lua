@@ -227,7 +227,7 @@ function M.open_picker()
   builtin.find_files({
     prompt_title = 'Notes',
     cwd = notes_dir,
-    find_command = { 'find', '.', '-name', '*.md', '-type', 'f' },
+    find_command = { 'bash', '-c', 'find . -name "*.md" -type f | sort -r' },
   })
 end
 
