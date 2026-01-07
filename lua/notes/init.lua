@@ -159,33 +159,35 @@ local function add_to_accomplishments(task_text, cursor_line, list_name)
     accomplishment_text = '- ' .. task_text
   end
 
-  local new_tag = list_name or ''
-  local insert_line = acc_line
+  local accomplishments = { accomplishment_text }
+  local section_end = acc_line
 
   for i = acc_line + 1, #lines do
     if lines[i]:match('^#') or lines[i]:match('^%s*$') then
       break
     end
+    table.insert(accomplishments, lines[i])
+    section_end = i
+  end
 
-    local existing_tag = get_accomplishment_tag(lines[i]) or ''
+  table.sort(accomplishments, function(a, b)
+    local tag_a = get_accomplishment_tag(a) or ''
+    local tag_b = get_accomplishment_tag(b) or ''
 
-    if new_tag == '' then
-      insert_line = i
-    elseif existing_tag == '' then
-      break
-    elseif new_tag <= existing_tag then
-      break
+    if tag_a == '' and tag_b ~= '' then
+      return false
+    elseif tag_a ~= '' and tag_b == '' then
+      return true
     else
-      insert_line = i
+      return tag_a < tag_b
     end
-  end
+  end)
 
-  vim.api.nvim_buf_set_lines(0, insert_line, insert_line, false, { accomplishment_text })
+  local old_count = section_end - acc_line
+  vim.api.nvim_buf_set_lines(0, acc_line, section_end, false, accomplishments)
 
-  if insert_line < cursor_line then
-    return 1
-  end
-  return 0
+  local new_count = #accomplishments
+  return new_count - old_count
 end
 
 local function remove_from_accomplishments(task_text, cursor_line, list_name)
